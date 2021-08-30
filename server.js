@@ -18,6 +18,8 @@ app.post("/object-detection", async (req, res) => {
   }
 
   const a = await [cocoSsd.load(), await getImg(uri)];
+  
+  if(!a) return res.status(403).json({code:403, message: 'invalid image!'})
 
   const img = tf.node.decodeImage(new Uint8Array(a[1]), 3);
 
@@ -26,6 +28,8 @@ app.post("/object-detection", async (req, res) => {
 
   // Classify the image.
   const predictions = await model.detect(img);
+  
+  if(!predictions) return res.status(403).json({code:403, message: 'invalid image!'})
 
   console.log(predictions)
   
