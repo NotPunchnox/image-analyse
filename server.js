@@ -6,7 +6,7 @@ const express = require("express"),
 
 app.use(express.json())
 
-app.post("/", async (req, res) => {
+app.post("/object-detection", async (req, res) => {
   
   const uri = String(req.body.image)
   
