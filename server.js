@@ -1,42 +1,34 @@
-const app = require('express')(),
-    mongoose = require('mongoose'),
-    bp = require('body-parser'),
-    start = new Date()
+const express = require("express"),
+  app = express(),
+  fetch = require('node-fetch')
 
-require('dotenv').config()
+app.post("/object-detection", async (req, res) => {
+    require("@tensorflow/tfjs-backend-cpu")
+    require("@tensorflow/tfjs-backend-webgl")
+    const cocoSsd = require("@tensorflow-models/coco-ssd")
+    const tf = require("@tensorflow/tfjs-node")
 
+    function getImg(u) {
+      return new Promise(async resolve => {
+        let r = await fetch(u)
+        resolve(r.buffer())
+      })
+    }
+    
+    const a = await [cocoSsd.load(), await getImg(req.query.uri)]
 
-app.use(require('cors')())
+    const img = tf.node.decodeImage(new Uint8Array(a[1]), 3)
 
-app.use(bp.urlencoded({
-    extended: false
-}))
-app.use(bp.json())
+    // Load the model.
+    const model = await cocoSsd.load()
 
-mongoose.connect(process.env.MONGO, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-    useFindAndModify: false,
-    useCreateIndex: true
+    // Classify the image.
+    const predictions = await model.detect(img)
+
+    if(!predictions) return res.status(403).json({ code: 403, message: 'error' })
+
+    return res.status(200).json({ code: 200, message: predictions})
+
 })
-mongoose.connection.on('connected', e => {
-    if (e) throw e
-    console.info('connected to data base!')
-})
 
-app.get('/', (req, res) => {
-    return res.status(203).json({
-        status: true,
-        code: 203,
-        message: 'hey 👋'
-    })
-})
-
-app.use(require('./routes/auth/index'), require('./routes/payments/index'), require('./routes/number/index'))
-app.use('/@me', require('./routes/user/index'))
-
-
-app.listen(process.env.PORT, (e) => {
-    if (e) throw e
-    console.log(`[\x1b[36mServer\x1b[0m]: \x1b[32mstarted successfully at\x1b[0m [\x1b[36mlocalhost:${process.env.PORT}\x1b[0m] \x1b[32min\x1b[0m [\x1b[36m${new Date() - start}ms\x1b[0m]`)
-})
+app.listen(process.env.PORT || 3000)
